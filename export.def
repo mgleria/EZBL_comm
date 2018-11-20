@@ -1,0 +1,13 @@
+EXPORTS
+    EZBLBootload
+    file_open
+    com_open
+    com_read
+    com_write
+    com_close
+    NOW_64
+    LogOpen
+    LogClose
+    LogData
+    Logf
+    LogError

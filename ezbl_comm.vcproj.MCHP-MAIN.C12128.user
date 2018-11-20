@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioUserFile
+	ProjectType="Visual C++"
+	Version="9.00"
+	ShowAllFiles="false"
+	>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			>
+			<DebugSettings
+				Command="$(TargetPath)"
+				WorkingDirectory="C:\Work\ezbl\ezbl_comm\Debug"
+				CommandArguments="-enum -artifact=..\..\ex_app_led_blink\dist\i2c\production\ex_app_led_blink.production.bl2 -com=I2C -baud=400000 -slave_address=0x60 -timeout=1100 -log=ezbl_com_log.txt"
+				Attach="false"
+				DebuggerType="3"
+				Remote="1"
+				RemoteMachine="CHN-LT-C12128"
+				RemoteCommand=""
+				HttpUrl=""
+				PDBPath=""
+				SQLDebugging=""
+				Environment=""
+				EnvironmentMerge="true"
+				DebuggerFlavor="0"
+				MPIRunCommand=""
+				MPIRunArguments=""
+				MPIRunWorkingDirectory=""
+				ApplicationCommand=""
+				ApplicationArguments=""
+				ShimCommand=""
+				MPIAcceptMode=""
+				MPIAcceptFilter=""
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			>
+			<DebugSettings
+				Command="$(TargetPath)"
+				WorkingDirectory="C:\Work\ezbl\ezbl_comm\Release"
+				CommandArguments="-enum=all -artifact=..\..\ex_app_led_blink\dist\i2c\production\ex_app_led_blink.production.bl2 -com=I2C -baud=400000 -slave_address=0x60 -timeout=1100 -log=ezbl_com_log.txt"
+				Attach="false"
+				DebuggerType="3"
+				Remote="1"
+				RemoteMachine="CHN-LT-C12128"
+				RemoteCommand=""
+				HttpUrl=""
+				PDBPath=""
+				SQLDebugging=""
+				Environment=""
+				EnvironmentMerge="true"
+				DebuggerFlavor="0"
+				MPIRunCommand=""
+				MPIRunArguments=""
+				MPIRunWorkingDirectory=""
+				ApplicationCommand=""
+				ApplicationArguments=""
+				ShimCommand=""
+				MPIAcceptMode=""
+				MPIAcceptFilter=""
+			/>
+		</Configuration>
+	</Configurations>
+</VisualStudioUserFile>
