@@ -1,0 +1,12 @@
+.vs/
+.vscode/
+Debug/
+Release/
+UpgradeLog.htm
+ezbl_comm.ncb
+ezbl_comm.sln
+ezbl_comm.suo
+ezbl_comm.vcproj.INSPIRON-14Z.Tincho.user
+ezbl_comm.vcxproj
+ezbl_comm.vcxproj.filters
+ezbl_comm.vcxproj.user

@@ -42,11 +42,11 @@
 #include "stdafx.h"
 
 #include <cstdarg>      // va_arg/va_start/va_end/va_list
-#include <stdio.h>      // printf(), fprintf()
-#include <stdlib.h>     // atol()
-#include <string.h>     // strerror()
-#include <time.h>       // clock_gettime()
-#include <errno.h>      // errno
+#include <stdio.h>		// printf(), fprintf()
+#include <stdlib.h>		// atol()
+#include <string>		// strerror()
+#include <time.h>			// clock_gettime()
+#include <errno.h>		// errno
 
 
 FILE * file_open(const char *filePath, const char *mode);

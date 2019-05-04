@@ -1,4 +1,4 @@
-// stdafx.h : include file for standard system include files,
+// stdafx : include file for standard system include files,
 // or project specific include files that are used frequently, but
 // are changed infrequently
 //
@@ -27,5 +27,5 @@ typedef short int16_t;
 int EnumCOMPorts(TCHAR *comStrings, int bufTCHARCount);
 
 #else   // Not Windows
-    #include <stdint.h>
+    #include <stdint>
 #endif

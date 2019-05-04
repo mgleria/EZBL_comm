@@ -44,15 +44,16 @@
  * To build this utility with gcc (ex: using Cygwin), try:
  *      gcc -o ezbl_comm ezbl_update.cpp logger.cpp
  */
+//using namespace std;
 
 #include "stdafx.h"
 
-#include <cstdarg>      // va_arg/va_start/va_end/va_list
-#include <stdio.h>      // printf(), fprintf()
-#include <stdlib.h>     // atol()
-#include <string.h>     // strerror()
-#include <time.h>       // clock_gettime()
-#include <errno.h>      // errno
+#include <cstdarg>			// va_arg/va_start/va_end/va_list
+#include <stdio.h>			// printf(), fprintf()
+#include <stdlib.h>			// atol()
+#include <string>			// strerror()
+#include <time.h>			// clock_gettime()
+#include <errno.h>			// errno
 #include "mcp2221_dll_um.h" // MCP2221A API error code definitions, ex: E_ERR_I2C_BUSY and E_ERR_TIMEOUT
 
 
@@ -83,10 +84,10 @@
 
     #define fileno(x)   _fileno(x)
 #else
-    #include <unistd.h>         // usleep()
-    #include <sys/termios.h>    // termios struct, cfsetospeed(), tcsetattr(), etc.
-    #include <sys/ioctl.h>      // ioctl()
-    //#include <linux/i2c-dev.h>  // I2C_SLAVE?    
+    #include <unistd>         // usleep()
+    #include <sys/termios>    // termios struct, cfsetospeed(), tcsetattr(), etc.
+    #include <sys/ioctl>      // ioctl()
+    //#include <linux/i2c-dev>  // I2C_SLAVE?    
 
     #define Mcp2221_Close(comHandle)                                                    fclose((comHandle))
     #define Mcp2221_I2cCancelCurrentTransfer(x)                                         0
@@ -142,6 +143,8 @@ size_t LogData(const char *typeStr, long streamOffset, const void *data, size_t 
 void Logf(const char *format, ...);
 void LogError(const char *format, ...);
 
+void printTimeDiff(unsigned long long startTime, unsigned long bl2Len);
+
 static int i2cMode;                     // 0 == UART, 1 == I2C
 static int baudSpecified = 0;           // Flag indicating if -baud= parameter provided (allows I2C default baud of 400000 vs 115200 UART default)
 static int i2cSlaveAddr;
@@ -152,6 +155,8 @@ static int mcpRetries = 0;              // MCP2221 I2C USB Product ID (for MCP22
 static int disableFlowControl = 0;      // Experimental feature enabled when -no_flow passed on command line
 static unsigned long dataTXOffset;      // PC TX byte count tracking for debug logging
 static unsigned long dataRXOffset;      // PC RX byte count tracking for debug logging
+
+
 
 
 int main(int argc, const char *argv[])
@@ -361,7 +366,8 @@ int main(int argc, const char *argv[])
             break;
 
         case EZBL_ERROR_LOCAL_COM_RD_TIMEOUT:   // (-1005)  0xFC13 ezbl_comm.exe communications port data read timeout
-            LogError("Timeout reading from '%s'\n", comPath);
+			LogError("Timeout: '%d'\n", milliTimeout);
+			LogError("Timeout reading from '%s'\n", comPath);
             if(logPath)
                 printf("Log saved to: %s\n", logPath);
             break;
@@ -424,6 +430,7 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
         switch(sm)
         {
             case SM_INIT:
+				printf("\n SM_INIT");
                 // Set reference time and counters for file transfer throughput statistics
                 startTime = NOW_64(); 
                 dataRXOffset = 0;
@@ -461,6 +468,7 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                 break;
 
             case SM_OFFER_UPDATE:
+				printf("\n SM_OFFER_UPDATE\n");
                 // Read first 64 bytes of .bl2 file (or file length, whichever is smaller)
                 fseek(bl2File, 0, SEEK_END);
                 bl2Len = ftell(bl2File);
@@ -502,6 +510,7 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                 break;
 
             case SM_GET_REMOTE_STATUS:
+				//printf("\n SM_GET_REMOTE_STATUS");
                 // Read 2 status bytes from the remote node.
                 // - 0xFF13 values should be returned initially indicating bootloader wants the update, but is busy erasing.
                 //   Bootlooder will periodically send this value to keep us alive/not timed out.
@@ -523,7 +532,7 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                         // First timeout: try retransmitting the header again with a very short timeout to see if we can help catch a node that has just been turned on
                         if(milliTimeout > 50)
                         {
-                            milliTimeout = 50;
+                            milliTimeout = 500;
                             sm = SM_OFFER_UPDATE;
                             continue;
                         }
@@ -537,14 +546,17 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                     return ret;
                 }
                 
-                if(remoteCode == 0x0000)
+				if(remoteCode == 0x0000){
                     sm = SM_REMOTE_TERMINATE;
+					printf("\n remoteCode == 0x0000\n");
+				}
                 else if((remoteCode > 0x0000) || ((remoteCode == (int16_t)0xFF11) && disableFlowControl))
                     sm = SM_TRANSFERING;
                 // Negative values stay in this state
                 break;
 
             case SM_TRANSFERING:
+				//printf("\n SM_TRANSFERING");
                 // Read .bl2 file data, saturated to a full buffer, the remote advirtised space available, or the bytes needed to reach EOF
                 chunkSize = disableFlowControl ? 0x7FFF : remoteCode;
                 if(chunkSize > bl2Len - bl2Offset)
@@ -571,7 +583,7 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                 }
                 bl2Offset += chunkSize;
 
-                // Update user display with dot marks indicating 2% complete per dot (actually) 
+                // Update user display with dot marks indicating 2% complete per dot (actually 
                 while(bl2Offset*50ul/bl2Len > (unsigned int)halfPercentDone)
                 {
                     halfPercentDone++;
@@ -580,13 +592,18 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                 }
 
                 remoteCode -= chunkSize;
-                if(!disableFlowControl && (remoteCode == 0))
+				if(!disableFlowControl && (remoteCode == 0)){
                     sm = SM_GET_REMOTE_STATUS;
-                if(bl2Offset == bl2Len)
+					//printf("\n !disableFlowControl && (remoteCode == 0)\n");
+				}
+				if(bl2Offset == bl2Len){
                     sm = SM_GET_REMOTE_TERMINATE;
+					printf("\n bl2Offset == bl2Len\n");
+				}
                 break;
 
             case SM_GET_REMOTE_TERMINATE:
+				printf("\n SM_GET_REMOTE_TERMINATE");
                 printf("|\n");
                 fflush(stdout);
                 remoteCode = -1;
@@ -597,8 +614,10 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                     rxByteCount += ret;
                     if(ret != 2)
                     {
-                        if(ret != EZBL_ERROR_LOCAL_COM_RD_TIMEOUT)
+						if(ret != EZBL_ERROR_LOCAL_COM_RD_TIMEOUT){
+							printTimeDiff(startTime, bl2Len);
                             LogError("%s():%d: Error reading from '%s': %s%s(%d)\n", __FUNCTION__, __LINE__, comPath, (errno ? " " : ""), (errno ? strerror(errno) : ""), errno);
+						}
                         sm = SM_CLEANUP;
                         break;
                     }
@@ -615,29 +634,33 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                 break;
 
             case SM_REMOTE_TERMINATE:
+				printf("\n SM_REMOTE_TERMINATE");
                 // Read final bootloader status return code
                 remoteCode = 0;
+				
                 ret = com_read(&remoteCode, 1, 2, comFile, milliTimeout);
                 rxByteCount += ret;
                 if(ret != 2)
                 {
-                    if(ret != EZBL_ERROR_LOCAL_COM_RD_TIMEOUT)
+					if(ret != EZBL_ERROR_LOCAL_COM_RD_TIMEOUT){
+						printTimeDiff(startTime, bl2Len);
                         LogError("%s():%d: Error reading from '%s': %s%s(%d)\n", __FUNCTION__, __LINE__, comPath, (errno ? " " : ""), (errno ? strerror(errno) : ""), errno);
-                    remoteCode = ret;
+					}
+                     remoteCode = ret;
                 }
                 else if(bl2Offset == bl2Len)
                 {
-                    double timeDif = ((double)(NOW_64() - startTime))/1.0e6;
-                    printf("                 %d bytes sent in %1.3fs (%d bytes/second)\n", bl2Len, timeDif, (size_t)(bl2Len/timeDif));
-                    Logf("%d bytes sent in %1.3fs (%d bytes/second)\n", bl2Len, timeDif, (size_t)(bl2Len/timeDif));
+                    printTimeDiff(startTime, bl2Len);
+                    
                 }
                 
                 if(remoteCode == (int16_t)EZBL_ERROR_CUSTOM_MESSAGE)
                 {
                     Logf("Remote termination: code 0x%04X", remoteCode);
                     int i = 0;
-                    while(com_read(&buf[i], 1, 1, comFile, milliTimeout > 1000 ? 1000 : milliTimeout) == 1)
+                    while(com_read(&buf[i], 1, 1, comFile, milliTimeout > 1000 ? 2000 : milliTimeout) == 1)
                     {
+						printf("\n milliTimeout has been downsized");
                         rxByteCount++;
                         buf[++i] = 0x00;
                         if(i >= sizeof(buf) - 1)
@@ -659,6 +682,7 @@ int EZBLBootload(const char *srcFilePath, const char *comPath, long baud, int sl
                 break;
 
             case SM_CLEANUP:
+				printf("\n SM_CLEANUP");
                 if(bl2File)
                     fclose(bl2File);
                 if(comFile)
@@ -965,7 +989,7 @@ int com_read(void *destPtr, size_t size, size_t nmemb, FILE *srcFile, long milli
     unsigned char *writePtr;
     unsigned long long startTime;
     int ret;
-    int retryCount = 1;
+    int retryCount = 10;
     
     startTime = NOW_64();
     
@@ -990,6 +1014,7 @@ int com_read(void *destPtr, size_t size, size_t nmemb, FILE *srcFile, long milli
             }
             else if(ferror(srcFile))
             {
+				printf("\nThe following error occurred: %d", ferror(srcFile));
 #if defined(_WIN32)
                 HANDLE hCom = (HANDLE)_get_osfhandle(fileno(srcFile));
                 DWORD errorFlags;
@@ -1004,6 +1029,7 @@ int com_read(void *destPtr, size_t size, size_t nmemb, FILE *srcFile, long milli
 
 #endif
                 clearerr(srcFile);
+				usleep(100);
                 if(retryCount--)
                     continue;
 
@@ -1190,4 +1216,13 @@ unsigned long long NOW_64(void)
     clock_gettime(CLOCK_MONOTONIC, &now);
     return now.tv_sec*1000000ull + now.tv_nsec/1000u;
 #endif
+}
+
+void printTimeDiff(unsigned long long startTime, unsigned long bl2Len)
+{
+	double timeDif;
+
+	timeDif = ((double)(NOW_64() - startTime))/1.0e6;
+	printf("                 %d bytes sent in %1.3fs (%d bytes/second)\n", bl2Len, timeDif, (size_t)(bl2Len/timeDif));
+	Logf("%d bytes sent in %1.3fs (%d bytes/second)\n", bl2Len, timeDif, (size_t)(bl2Len/timeDif));
 }
